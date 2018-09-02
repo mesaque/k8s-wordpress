@@ -8,21 +8,8 @@ parameters:
   zone: us-east1-b
   fsType: ext4
 ---
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: wordpress-disk
-spec:
-  accessModes:
-    - ReadWriteOnce
-  volumeMode: Filesystem
-  resources:
-    requests:
-      storage: 10Gi
-  storageClassName: wordpress-storage-class-disk
----
 apiVersion: apps/v1 #create wordpress controller
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: wordpress
   labels:
@@ -34,6 +21,8 @@ spec:
   selector:
     matchLabels:
       app: wordpress
+  serviceName: "wordpress-scaled"
+  replicas: 5
   template:
     metadata:
       labels:
@@ -48,7 +37,12 @@ spec:
           volumeMounts:
             - name: disk-persistent-storage
               mountPath: /usr/local/openresty/nginx/html
-      volumes:
-        - name: disk-persistent-storage
-          persistentVolumeClaim:
-            claimName: wordpress-disk
+  volumeClaimTemplates:
+    - metadata:
+        name: disk-persistent-storage
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: "wordpress-storage-class-disk"
+        resources:
+          requests:
+            storage: 45Gi
