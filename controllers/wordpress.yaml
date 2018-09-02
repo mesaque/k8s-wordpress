@@ -1,0 +1,54 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: wordpress-storage-class-disk
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-ssd
+  zone: us-east1-b
+  fsType: ext4
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: wordpress-disk
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: wordpress-storage-class-disk
+---
+apiVersion: apps/v1 #create wordpress controller
+kind: Deployment
+metadata:
+  name: wordpress
+  labels:
+    app: wordpress
+    operator: mesaque
+    environment: prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wordpress
+  template:
+    metadata:
+      labels:
+        app: wordpress
+    spec:
+      containers:
+        - image: apiki/webserver:php
+          name: wordpress
+          ports:
+            - containerPort: 80
+              name: wordpress
+          volumeMounts:
+            - name: disk-persistent-storage
+              mountPath: /var/www/html
+      volumes:
+        - name: disk-persistent-storage
+          persistentVolumeClaim:
+            claimName: wordpress-disk
